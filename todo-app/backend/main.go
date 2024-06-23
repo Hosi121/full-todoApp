@@ -30,61 +30,108 @@ func initDB() {
     if err != nil {
         log.Fatalf("Could not create users table: %v", err)
     }
+
+    _, err = db.Exec(`CREATE TABLE IF NOT EXISTS tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`)
+    if err != nil {
+        log.Fatalf("Could not create tasks table: %v", err)
+    }
 }
 
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-    var creds struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
-    }
+type Task struct {
+    ID          int       `json:"id"`
+    UserID      int       `json:"user_id"`
+    Title       string    `json:"title"`
+    Description string    `json:"description"`
+    CreatedAt   time.Time `json:"created_at"`
+    UpdatedAt   time.Time `json:"updated_at"`
+}
 
-    err := json.NewDecoder(r.Body).Decode(&creds)
+func createTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
     if err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
     }
 
-    hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+    result, err := db.Exec("INSERT INTO tasks (user_id, title, description) VALUES (?, ?, ?)", task.UserID, task.Title, task.Description)
     if err != nil {
-        http.Error(w, "Could not hash password", http.StatusInternalServerError)
+        http.Error(w, "Could not create task", http.StatusInternalServerError)
         return
     }
 
-    _, err = db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", creds.Username, hash)
+    taskID, err := result.LastInsertId()
     if err != nil {
-        http.Error(w, "Could not register user", http.StatusInternalServerError)
+        http.Error(w, "Could not retrieve task ID", http.StatusInternalServerError)
         return
     }
 
+    task.ID = int(taskID)
     w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(task)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-    var creds struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
+func getTasksHandler(w http.ResponseWriter, r *http.Request) {
+    userID := r.URL.Query().Get("user_id")
+    rows, err := db.Query("SELECT id, user_id, title, description, created_at, updated_at FROM tasks WHERE user_id = ?", userID)
+    if err != nil {
+        http.Error(w, "Could not fetch tasks", http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
+
+    tasks := []Task{}
+    for rows.Next() {
+        var task Task
+        if err := rows.Scan(&task.ID, &task.UserID, &task.Title, &task.Description, &task.CreatedAt, &task.UpdatedAt); err != nil {
+            http.Error(w, "Could not scan task", http.StatusInternalServerError)
+            return
+        }
+        tasks = append(tasks, task)
     }
 
-    err := json.NewDecoder(r.Body).Decode(&creds)
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(tasks)
+}
+
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
     if err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
     }
 
-    var storedHash string
-    err = db.QueryRow("SELECT password_hash FROM users WHERE username = ?", creds.Username).Scan(&storedHash)
+    _, err = db.Exec("UPDATE tasks SET title = ?, description = ?, updated_at = NOW() WHERE id = ?", task.Title, task.Description, task.ID)
     if err != nil {
-        if err == sql.ErrNoRows {
-            http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-        } else {
-            http.Error(w, "Could not fetch user", http.StatusInternalServerError)
-        }
+        http.Error(w, "Could not update task", http.StatusInternalServerError)
         return
     }
 
-    err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(creds.Password))
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(task)
+}
+
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
     if err != nil {
-        http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = db.Exec("DELETE FROM tasks WHERE id = ?", task.ID)
+    if err != nil {
+        http.Error(w, "Could not delete task", http.StatusInternalServerError)
         return
     }
 
@@ -141,7 +188,6 @@ func addTagToTaskHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
-
 func main() {
     initDB()
 
@@ -153,7 +199,6 @@ func main() {
     http.HandleFunc("/tasks/delete", deleteTaskHandler)
     http.HandleFunc("/tags", createTagHandler)
     http.HandleFunc("/tasks/add-tag", addTagToTaskHandler)
-
     log.Println("Starting server on :8080")
     if err := http.ListenAndServe(":8080", nil); err != nil {
         log.Fatalf("Could not start server: %s\n", err.Error())

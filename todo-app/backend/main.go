@@ -30,65 +30,76 @@ func initDB() {
     if err != nil {
         log.Fatalf("Could not create users table: %v", err)
     }
+
+    _, err = db.Exec(`CREATE TABLE IF NOT EXISTS tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )`)
+    if err != nil {
+        log.Fatalf("Could not create tasks table: %v", err)
+    }
 }
 
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-    var creds struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
-    }
+type Task struct {
+    ID          int       `json:"id"`
+    UserID      int       `json:"user_id"`
+    Title       string    `json:"title"`
+    Description string    `json:"description"`
+    CreatedAt   time.Time `json:"created_at"`
+    UpdatedAt   time.Time `json:"updated_at"`
+}
 
-    err := json.NewDecoder(r.Body).Decode(&creds)
+func createTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
     if err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
     }
 
-    hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+    result, err := db.Exec("INSERT INTO tasks (user_id, title, description) VALUES (?, ?, ?)", task.UserID, task.Title, task.Description)
     if err != nil {
-        http.Error(w, "Could not hash password", http.StatusInternalServerError)
+        http.Error(w, "Could not create task", http.StatusInternalServerError)
         return
     }
 
-    _, err = db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", creds.Username, hash)
+    taskID, err := result.LastInsertId()
     if err != nil {
-        http.Error(w, "Could not register user", http.StatusInternalServerError)
+        http.Error(w, "Could not retrieve task ID", http.StatusInternalServerError)
         return
     }
 
+    task.ID = int(taskID)
     w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(task)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-    var creds struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
-    }
-
-    err := json.NewDecoder(r.Body).Decode(&creds)
+func getTasksHandler(w http.ResponseWriter, r *http.Request) {
+    userID := r.URL.Query().Get("user_id")
+    rows, err := db.Query("SELECT id, user_id, title, description, created_at, updated_at FROM tasks WHERE user_id = ?", userID)
     if err != nil {
-        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        http.Error(w, "Could not fetch tasks", http.StatusInternalServerError)
         return
     }
+    defer rows.Close()
 
-    var storedHash string
-    err = db.QueryRow("SELECT password_hash FROM users WHERE username = ?", creds.Username).Scan(&storedHash)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-        } else {
-            http.Error(w, "Could not fetch user", http.StatusInternalServerError)
+    tasks := []Task{}
+    for rows.Next() {
+        var task Task
+        if err := rows.Scan(&task.ID, &task.UserID, &task.Title, &task.Description, &task.CreatedAt, &task.UpdatedAt); err != nil {
+            http.Error(w, "Could not scan task", http.StatusInternalServerError)
+            return
         }
-        return
-    }
-
-    err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(creds.Password))
-    if err != nil {
-        http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-        return
+        tasks = append(tasks, task)
     }
 
     w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(tasks)
 }
 
 func main() {
@@ -96,6 +107,8 @@ func main() {
 
     http.HandleFunc("/register", registerHandler)
     http.HandleFunc("/login", loginHandler)
+    http.HandleFunc("/tasks", createTaskHandler)
+    http.HandleFunc("/tasks/list", getTasksHandler)
 
     log.Println("Starting server on :8080")
     if err := http.ListenAndServe(":8080", nil); err != nil {

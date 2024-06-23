@@ -138,6 +138,55 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
+type Tag struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+
+func createTagHandler(w http.ResponseWriter, r *http.Request) {
+    var tag Tag
+    err := json.NewDecoder(r.Body).Decode(&tag)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    result, err := db.Exec("INSERT INTO tags (name) VALUES (?)", tag.Name)
+    if err != nil {
+        http.Error(w, "Could not create tag", http.StatusInternalServerError)
+        return
+    }
+
+    tagID, err := result.LastInsertId()
+    if err != nil {
+        http.Error(w, "Could not retrieve tag ID", http.StatusInternalServerError)
+        return
+    }
+
+    tag.ID = int(tagID)
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(tag)
+}
+
+func addTagToTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var payload struct {
+        TaskID int `json:"task_id"`
+        TagID  int `json:"tag_id"`
+    }
+    err := json.NewDecoder(r.Body).Decode(&payload)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = db.Exec("INSERT INTO task_tags (task_id, tag_id) VALUES (?, ?)", payload.TaskID, payload.TagID)
+    if err != nil {
+        http.Error(w, "Could not add tag to task", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+}
 
 func main() {
     initDB()
@@ -148,11 +197,10 @@ func main() {
     http.HandleFunc("/tasks/list", getTasksHandler)
     http.HandleFunc("/tasks/update", updateTaskHandler)
     http.HandleFunc("/tasks/delete", deleteTaskHandler)
-
+    http.HandleFunc("/tags", createTagHandler)
+    http.HandleFunc("/tasks/add-tag", addTagToTaskHandler)
     log.Println("Starting server on :8080")
     if err := http.ListenAndServe(":8080", nil); err != nil {
         log.Fatalf("Could not start server: %s\n", err.Error())
     }
 }
-
-

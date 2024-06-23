@@ -102,6 +102,43 @@ func getTasksHandler(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(tasks)
 }
 
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = db.Exec("UPDATE tasks SET title = ?, description = ?, updated_at = NOW() WHERE id = ?", task.Title, task.Description, task.ID)
+    if err != nil {
+        http.Error(w, "Could not update task", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(task)
+}
+
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = db.Exec("DELETE FROM tasks WHERE id = ?", task.ID)
+    if err != nil {
+        http.Error(w, "Could not delete task", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+}
+
+
 func main() {
     initDB()
 
@@ -109,10 +146,13 @@ func main() {
     http.HandleFunc("/login", loginHandler)
     http.HandleFunc("/tasks", createTaskHandler)
     http.HandleFunc("/tasks/list", getTasksHandler)
+    http.HandleFunc("/tasks/update", updateTaskHandler)
+    http.HandleFunc("/tasks/delete", deleteTaskHandler)
 
     log.Println("Starting server on :8080")
     if err := http.ListenAndServe(":8080", nil); err != nil {
         log.Fatalf("Could not start server: %s\n", err.Error())
     }
 }
+
 

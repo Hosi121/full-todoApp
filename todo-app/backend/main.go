@@ -3,9 +3,8 @@ package main
 import (
     "log"
     "net/http"
-
-    "todo-app/db"
-    "todo-app/handlers"
+    "backend/db"
+    "backend/handlers"
 )
 
 func main() {

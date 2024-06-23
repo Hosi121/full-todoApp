@@ -1,13 +1,12 @@
 package handlers
 
 import (
-    "database/sql"
     "encoding/json"
     "net/http"
     "time"
 
-    "todo-app/db"
-    "todo-app/models"
+    "backend/db"
+    "backend/models"
 )
 
 func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {

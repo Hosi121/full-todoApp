@@ -4,8 +4,8 @@ import (
     "encoding/json"
     "net/http"
 
-    "todo-app/db"
-    "todo-app/models"
+    "backend/db"
+    "backend/models"
 )
 
 func FilterTasksHandler(w http.ResponseWriter, r *http.Request) {

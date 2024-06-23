@@ -5,6 +5,7 @@ interface Task {
   user_id: number;
   title: string;
   description: string;
+  priority: number;
   created_at: string;
   updated_at: string;
 }
@@ -40,16 +41,17 @@ const TaskList: React.FC = () => {
   const handleUpdate = async (id: number) => {
     const newTitle = prompt('Enter new title');
     const newDescription = prompt('Enter new description');
+    const newPriority = parseInt(prompt('Enter new priority') || '0', 10);
     if (newTitle && newDescription) {
       const response = await fetch('/tasks/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, title: newTitle, description: newDescription }),
+        body: JSON.stringify({ id, title: newTitle, description: newDescription, priority: newPriority }),
       });
       if (response.ok) {
-        setTasks(tasks.map(task => task.id === id ? { ...task, title: newTitle, description: newDescription } : task));
+        setTasks(tasks.map(task => task.id === id ? { ...task, title: newTitle, description: newDescription, priority: newPriority } : task));
       } else {
         alert('Task update failed');
       }
@@ -64,6 +66,7 @@ const TaskList: React.FC = () => {
           <li key={task.id}>
             <h3>{task.title}</h3>
             <p>{task.description}</p>
+            <p>Priority: {task.priority}</p>
             <button onClick={() => handleUpdate(task.id)}>Edit</button>
             <button onClick={() => handleDelete(task.id)}>Delete</button>
           </li>

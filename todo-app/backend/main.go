@@ -50,6 +50,7 @@ type Task struct {
     UserID      int       `json:"user_id"`
     Title       string    `json:"title"`
     Description string    `json:"description"`
+    Priority    int       `json:"priority"`
     CreatedAt   time.Time `json:"created_at"`
     UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -62,7 +63,7 @@ func createTaskHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    result, err := db.Exec("INSERT INTO tasks (user_id, title, description) VALUES (?, ?, ?)", task.UserID, task.Title, task.Description)
+    result, err := db.Exec("INSERT INTO tasks (user_id, title, description, priority) VALUES (?, ?, ?, ?)", task.UserID, task.Title, task.Description, task.Priority)
     if err != nil {
         http.Error(w, "Could not create task", http.StatusInternalServerError)
         return
@@ -76,6 +77,24 @@ func createTaskHandler(w http.ResponseWriter, r *http.Request) {
 
     task.ID = int(taskID)
     w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(task)
+}
+
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+    var task Task
+    err := json.NewDecoder(r.Body).Decode(&task)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = db.Exec("UPDATE tasks SET title = ?, description = ?, priority = ?, updated_at = NOW() WHERE id = ?", task.Title, task.Description, task.Priority, task.ID)
+    if err != nil {
+        http.Error(w, "Could not update task", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(task)
 }
 
@@ -101,25 +120,6 @@ func getTasksHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(tasks)
 }
-
-func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
-    var task Task
-    err := json.NewDecoder(r.Body).Decode(&task)
-    if err != nil {
-        http.Error(w, "Invalid request payload", http.StatusBadRequest)
-        return
-    }
-
-    _, err = db.Exec("UPDATE tasks SET title = ?, description = ?, updated_at = NOW() WHERE id = ?", task.Title, task.Description, task.ID)
-    if err != nil {
-        http.Error(w, "Could not update task", http.StatusInternalServerError)
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(task)
-}
-
 
 func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
     var task Task

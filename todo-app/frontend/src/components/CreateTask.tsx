@@ -1,4 +1,5 @@
 import React, { useState, FormEvent } from 'react';
+import { TextField, Button, Container, Typography, Box } from '@mui/material';
 
 const CreateTask: React.FC = () => {
   const [title, setTitle] = useState<string>('');
@@ -23,40 +24,66 @@ const CreateTask: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label>
-          Title:
-          <input
-            type="text"
+    <Container maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Typography component="h1" variant="h5">
+          Create Task
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="title"
+            label="Title"
+            name="title"
+            autoComplete="title"
+            autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-        </label>
-      </div>
-      <div>
-        <label>
-          Description:
-          <textarea
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="description"
+            label="Description"
+            type="text"
+            id="description"
+            autoComplete="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </label>
-      </div>
-      <div>
-        <label>
-          Priority:
-          <input
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="priority"
+            label="Priority"
             type="number"
+            id="priority"
             value={priority}
             onChange={(e) => setPriority(parseInt(e.target.value))}
           />
-        </label>
-      </div>
-      <button type="submit">Create Task</button>
-    </form>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+          >
+            Create Task
+          </Button>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 
 export default CreateTask;
-

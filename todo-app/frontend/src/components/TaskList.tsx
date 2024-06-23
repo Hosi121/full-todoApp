@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Container, Typography, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Box, Button } from '@mui/material';
+import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 
 interface Task {
   id: number;
@@ -59,22 +61,32 @@ const TaskList: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>Task List</h2>
-      <ul>
-        {tasks.map(task => (
-          <li key={task.id}>
-            <h3>{task.title}</h3>
-            <p>{task.description}</p>
-            <p>Priority: {task.priority}</p>
-            <button onClick={() => handleUpdate(task.id)}>Edit</button>
-            <button onClick={() => handleDelete(task.id)}>Delete</button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Container>
+      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Typography component="h1" variant="h5">
+          Task List
+        </Typography>
+        <List>
+          {tasks.map(task => (
+            <ListItem key={task.id}>
+              <ListItemText
+                primary={task.title}
+                secondary={`Priority: ${task.priority} - ${task.description}`}
+              />
+              <ListItemSecondaryAction>
+                <IconButton edge="end" aria-label="edit" onClick={() => handleUpdate(task.id)}>
+                  <EditIcon />
+                </IconButton>
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(task.id)}>
+                  <DeleteIcon />
+                </IconButton>
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    </Container>
   );
 };
 
 export default TaskList;
-

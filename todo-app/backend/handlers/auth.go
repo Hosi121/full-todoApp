@@ -16,6 +16,7 @@ type Credentials struct {
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+    enableCors(&w) // 追加
     var creds Credentials
     err := json.NewDecoder(r.Body).Decode(&creds)
     if err != nil {
@@ -39,6 +40,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+    enableCors(&w) // 追加
     var creds Credentials
     err := json.NewDecoder(r.Body).Decode(&creds)
     if err != nil {
@@ -60,3 +62,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
+func enableCors(w *http.ResponseWriter) {
+    (*w).Header().Set("Access-Control-Allow-Origin", "*")
+    (*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+    (*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+}

@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from 'react';
-import { TextField, Button, Container, Typography, Box } from '@mui/material';
+import { TextField, Button, Container, Typography, Box, Card, CardContent } from '@mui/material';
 
 const CreateTask: React.FC = () => {
   const [title, setTitle] = useState<string>('');
@@ -24,7 +24,7 @@ const CreateTask: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xs">
+    <Container maxWidth="sm">
       <Box
         sx={{
           marginTop: 8,
@@ -33,54 +33,58 @@ const CreateTask: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h5">
-          Create Task
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="title"
-            label="Title"
-            name="title"
-            autoComplete="title"
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="description"
-            label="Description"
-            type="text"
-            id="description"
-            autoComplete="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="priority"
-            label="Priority"
-            type="number"
-            id="priority"
-            value={priority}
-            onChange={(e) => setPriority(parseInt(e.target.value))}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            Create Task
-          </Button>
-        </Box>
+        <Card sx={{ width: '100%' }}>
+          <CardContent>
+            <Typography component="h1" variant="h5" align="center">
+              Create Task
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="title"
+                label="Title"
+                name="title"
+                autoComplete="title"
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="description"
+                label="Description"
+                type="text"
+                id="description"
+                autoComplete="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="priority"
+                label="Priority"
+                type="number"
+                id="priority"
+                value={priority}
+                onChange={(e) => setPriority(parseInt(e.target.value))}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+              >
+                Create Task
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
     </Container>
   );

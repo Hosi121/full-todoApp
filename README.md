@@ -4,6 +4,7 @@ This is a simple Todo application built with Go, React, MySQL, and Docker. The a
 
 ## Project Structure
 
+```
 backend/
 ├── db/
 │ ├── init.go
@@ -36,7 +37,7 @@ frontend/
 ├── package.json
 ├── tsconfig.json
 docker-compose.yml
-
+```
 
 ## Prerequisites
 
